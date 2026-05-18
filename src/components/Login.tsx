@@ -13,10 +13,28 @@ interface LoginProps {
 export default function Login({ onLogin, dataSantri }: LoginProps) {
   const [activeTab, setActiveTab] = useState<'wali' | 'admin'>('wali');
   const [adminDivisi, setAdminDivisi] = useState<'putra' | 'putri'>('putra');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [waliHp, setWaliHp] = useState('');
   const [matchingSantri, setMatchingSantri] = useState<Santri[]>([]);
   const [errorVisible, setErrorVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    // Simple verification for default pengurus credentials
+    // Note: In production we should use Firebase Auth, but as a quick fix/fallback:
+    if (adminEmail === 'ppalfurqon.ofc@gmail.com' && 
+       ((adminDivisi === 'putra' && adminPassword === 'pengurusafputra') || 
+        (adminDivisi === 'putri' && adminPassword === 'pengurusafputri'))) {
+      onLogin('admin', adminDivisi);
+    } else {
+      setErrorVisible(true);
+      setTimeout(() => setErrorVisible(false), 3000);
+    }
+    setLoading(false);
+  };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -104,7 +122,6 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-4"
           >
-            {/* ... admin form ... */}
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-tighter">Pilih Divisi Pengurus</label>
               <div className="grid grid-cols-2 gap-2">
@@ -124,16 +141,54 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
                 </button>
               </div>
             </div>
-            
-            <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-center">
-              <p className="text-[10px] text-gray-400 uppercase font-bold mb-3">Gunakan Akun Google Pengelola</p>
+
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-gray-700">Email Pengurus</label>
+                <input 
+                  type="email" 
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="ppalfurqon.ofc@gmail.com" 
+                  className="w-full border border-gray-300 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-gray-700">Password</label>
+                <input 
+                  type="password" 
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••" 
+                  className="w-full border border-gray-300 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  required
+                />
+              </div>
               <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm"
+              >
+                Masuk Password
+              </button>
+            </form>
+            
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-200"></span></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-400">atau</span></div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-center">
+              <p className="text-[10px] text-gray-400 uppercase font-bold mb-3">Login dengan Google</p>
+              <button 
+                type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
                 className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-sm"
               >
                 <LogIn className="w-4 h-4 text-emerald-600" />
-                <span>{loading ? 'Menghubungkan...' : 'Masuk dengan Google'}</span>
+                <span>Google Login</span>
               </button>
             </div>
 
@@ -220,6 +275,10 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
             <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all text-sm mt-2">
               Cek Data Santri
             </button>
+            <div className="bg-slate-50 p-3 rounded-xl border border-gray-100 flex items-center space-x-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <p className="text-[9px] text-gray-400 leading-tight">Pastikan nomor HP sama dengan yang didaftarkan ke pengurus.</p>
+            </div>
           </motion.form>
         )}
       </AnimatePresence>

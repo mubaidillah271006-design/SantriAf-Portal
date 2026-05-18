@@ -33,20 +33,26 @@ export default function App() {
   }, [dataSantri, dataAbsensi, dataPelanggaran, dataInfo, loading]);
 
   useEffect(() => {
+    // Check for manual login persistence first
+    const savedRole = localStorage.getItem('lastRole') as AuthRole | null;
+    const savedDivisi = localStorage.getItem('lastDivisi') as 'putra' | 'putri' | null;
+    const savedWaliId = localStorage.getItem('lastWaliSantriId');
+
+    if (savedRole === 'admin' && savedDivisi) {
+      setCurrentUser({ role: 'admin', divisi: savedDivisi });
+    } else if (savedRole === 'wali' && savedWaliId) {
+      setCurrentUser({ role: 'wali', santriId: savedWaliId });
+    }
+
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        const savedDivisi = localStorage.getItem('lastDivisi') as 'putra' | 'putri' | null;
-        if (savedDivisi) {
-          setCurrentUser({ role: 'admin', divisi: savedDivisi });
-        }
-      } else {
-        const savedWaliId = localStorage.getItem('lastWaliSantriId');
-        if (savedWaliId) {
-          setCurrentUser({ role: 'wali', santriId: savedWaliId });
-        } else {
-          setCurrentUser(null);
+        const currentSavedDivisi = localStorage.getItem('lastDivisi') as 'putra' | 'putri' | null;
+        if (currentSavedDivisi) {
+          setCurrentUser({ role: 'admin', divisi: currentSavedDivisi });
         }
       }
+      // Note: We don't automatically logout if firebaseUser is null here,
+      // because we might have a manual login active.
     });
 
     return () => unsubAuth();
@@ -61,6 +67,7 @@ export default function App() {
   }
 
   const handleLogin = (role: AuthRole, divisi?: 'putra' | 'putri', santriId?: string) => {
+    localStorage.setItem('lastRole', role);
     if (role === 'admin' && divisi) {
       localStorage.setItem('lastDivisi', divisi);
     }
@@ -71,6 +78,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('lastRole');
     localStorage.removeItem('lastDivisi');
     localStorage.removeItem('lastWaliSantriId');
     auth.signOut();
