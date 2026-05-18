@@ -28,6 +28,7 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
     if (adminEmail === 'ppalfurqon.ofc@gmail.com' && 
        ((adminDivisi === 'putra' && adminPassword === 'pengurusafputra') || 
         (adminDivisi === 'putri' && adminPassword === 'pengurusafputri'))) {
+      alert('Login Password Berhasil. Perhatian: Anda hanya bisa melihat data. Untuk MENAMBAH/MENGUBAH data, Anda harus Login dengan Google.');
       onLogin('admin', adminDivisi);
     } else {
       setErrorVisible(true);
@@ -168,9 +169,9 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm"
+                className="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm"
               >
-                Masuk Password
+                Masuk Password (Akses Baca)
               </button>
             </form>
             
@@ -179,17 +180,18 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
               <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-400">atau</span></div>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-center">
-              <p className="text-[10px] text-gray-400 uppercase font-bold mb-3">Login dengan Google</p>
+            <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
+              <p className="text-[10px] text-emerald-600 uppercase font-bold mb-3">Rekomendasi: Login Google (Akses Full)</p>
               <button 
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-sm"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 text-sm border-2 border-emerald-500"
               >
-                <LogIn className="w-4 h-4 text-emerald-600" />
-                <span>Google Login</span>
+                <LogIn className="w-4 h-4 text-white" />
+                <span>Masuk dengan Google</span>
               </button>
+              <p className="text-[9px] text-emerald-600/70 mt-2 italic">Gunakan email yang sudah didaftarkan (kangngedit271006 / ppalfurqon.ofc)</p>
             </div>
 
             {errorVisible && (

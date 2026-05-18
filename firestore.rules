@@ -13,6 +13,7 @@ service cloud.firestore {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
         request.auth.token.email == "kangngedit271006@gmail.com" ||
+        request.auth.token.email.matches("ppalfurqon.ofc@") ||
         request.auth.token.email == "ppalfurqon.ofc@gmail.com"
       );
     }
@@ -33,8 +34,8 @@ service cloud.firestore {
                data.bulanan is map;
       }
 
-      allow create: if isAdmin() && isValidSantri(incoming());
-      allow update: if isAdmin() && isValidSantri(incoming());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
       
       // Wali needs to find their santri. Secure list should ideally check a personal field.
