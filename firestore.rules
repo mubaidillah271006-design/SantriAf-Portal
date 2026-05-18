@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return request.auth.token.email_verified == true; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "kangngedit271006@gmail.com"
+      );
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // 1. Santri Rules
+    match /santri/{santriId} {
+      function isValidSantri(data) {
+        return data.keys().hasAll(['nis', 'nama', 'kamar', 'divisi', 'waliHp', 'saldo', 'bulanan']) &&
+               data.nis is string && data.nis.size() > 0 && data.nis.size() <= 20 &&
+               data.nama is string && data.nama.size() > 0 && data.nama.size() <= 100 &&
+               data.kamar is string && data.kamar.size() > 0 && data.kamar.size() <= 50 &&
+               data.divisi in ['putra', 'putri'] &&
+               data.waliHp is string && data.waliHp.size() >= 8 && data.waliHp.size() <= 20 &&
+               data.saldo is number && data.saldo >= 0 &&
+               data.bulanan is map;
+      }
+
+      allow create: if isAdmin() && isValidSantri(incoming());
+      allow update: if isAdmin() && isValidSantri(incoming());
+      allow delete: if isAdmin();
+      
+      // Wali needs to find their santri. Secure list should ideally check a personal field.
+      // For now, these are public reads. Ensure PII is minimal or move to secure auth.
+      allow get: if true;
+      allow list: if true; 
+    }
+
+    // 2. Absensi Rules
+    match /absensi/{absId} {
+      function isValidAbsensi(data) {
+        return data.keys().hasAll(['santriId', 'date', 'kegiatan', 'keterangan', 'divisi']) &&
+               isValidId(data.santriId) &&
+               data.date is string && data.date.size() == 10 &&
+               data.kegiatan is string && data.kegiatan.size() <= 100 &&
+               data.keterangan in ['Hadir', 'Sakit', 'Izin', 'Alpa'] &&
+               data.divisi in ['putra', 'putri'];
+      }
+
+      allow create: if isAdmin() && isValidAbsensi(incoming());
+      allow update: if isAdmin() && isValidAbsensi(incoming());
+      allow delete: if isAdmin();
+      
+      allow read: if true;
+    }
+
+    // 3. Pelanggaran Rules
+    match /pelanggaran/{pelId} {
+      function isValidPelanggaran(data) {
+        return data.keys().hasAll(['santriId', 'date', 'deskripsi', 'denda', 'statusLunas', 'divisi']) &&
+               isValidId(data.santriId) &&
+               data.date is string && data.date.size() == 10 &&
+               data.deskripsi is string && data.deskripsi.size() <= 500 &&
+               data.denda is number && data.denda >= 0 &&
+               data.statusLunas is bool &&
+               data.divisi in ['putra', 'putri'];
+      }
+
+      allow create: if isAdmin() && isValidPelanggaran(incoming());
+      allow update: if isAdmin() && isValidPelanggaran(incoming());
+      allow delete: if isAdmin();
+      
+      allow read: if true;
+    }
+
+    // 4. Info Rules
+    match /info/{infoId} {
+      function isValidInfo(data) {
+        return data.keys().hasAll(['judul', 'isi', 'date']) &&
+               data.judul is string && data.judul.size() <= 200 &&
+               data.isi is string && data.isi.size() <= 2000 &&
+               data.date is string && data.date.size() == 10;
+      }
+
+      allow create: if isAdmin() && isValidInfo(incoming());
+      allow update: if isAdmin() && isValidInfo(incoming());
+      allow delete: if isAdmin();
+      
+      allow read: if true;
+    }
+
+    // 5. Admin collection
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+  }
+}

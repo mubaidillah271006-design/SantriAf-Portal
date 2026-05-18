@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "Santri": {
+      "title": "Santri",
+      "description": "Informasi data santri",
+      "type": "object",
+      "properties": {
+        "nis": { "type": "string" },
+        "nama": { "type": "string" },
+        "kamar": { "type": "string" },
+        "divisi": { "enum": ["putra", "putri"] },
+        "waliNama": { "type": "string" },
+        "waliHp": { "type": "string" },
+        "kelasUmum": { "type": "string" },
+        "kelasMadrasah": { "type": "string" },
+        "saldo": { "type": "number" },
+        "bulanan": { "type": "object" }
+      },
+      "required": ["nis", "nama", "kamar", "divisi", "waliHp"]
+    },
+    "Absensi": {
+      "title": "Absensi",
+      "description": "Catatan kehadiran santri",
+      "type": "object",
+      "properties": {
+        "santriId": { "type": "string" },
+        "date": { "type": "string" },
+        "kegiatan": { "type": "string" },
+        "keterangan": { "enum": ["Hadir", "Sakit", "Izin", "Alpa"] },
+        "divisi": { "enum": ["putra", "putri"] }
+      }
+    },
+    "Pelanggaran": {
+      "title": "Pelanggaran",
+      "description": "Catatan pelanggaran santri",
+      "type": "object",
+      "properties": {
+        "santriId": { "type": "string" },
+        "date": { "type": "string" },
+        "deskripsi": { "type": "string" },
+        "denda": { "type": "number" },
+        "statusLunas": { "type": "boolean" },
+        "divisi": { "enum": ["putra", "putri"] }
+      }
+    },
+    "Info": {
+      "title": "Info",
+      "description": "Pengumuman dan informasi",
+      "type": "object",
+      "properties": {
+        "judul": { "type": "string" },
+        "isi": { "type": "string" },
+        "date": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "santri": {
+      "schema": "Santri",
+      "description": "Koleksi data santri"
+    },
+    "absensi": {
+      "schema": "Absensi",
+      "description": "Koleksi catatan absensi"
+    },
+    "pelanggaran": {
+      "schema": "Pelanggaran",
+      "description": "Koleksi catatan pelanggaran"
+    },
+    "info": {
+      "schema": "Info",
+      "description": "Koleksi pengumuman"
+    }
+  }
+}

@@ -1,62 +1,108 @@
 import { useState, useEffect } from 'react';
+import { 
+  collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc
+} from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Santri, Absensi, Pelanggaran, Info } from '../types';
-import { getInitialBulanan } from '../constants';
 
 export function useDatabase() {
-  const [dataSantri, setDataSantri] = useState<Santri[]>(() => {
-    const saved = localStorage.getItem('SantriAf_santri');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Migrate old data
-      return parsed.map((s: any) => ({
-        ...s,
-        kelasUmum: s.kelasUmum || '-',
-        kelasMadrasah: s.kelasMadrasah || '-',
-        saldo: s.saldo || 0,
-        bulanan: s.bulanan || getInitialBulanan()
-      }));
-    }
-    return [
-      { id: 1, nis: "1001", nama: "Ahmad Mujib", kamar: "Al-Farabi", divisi: "putra", waliNama: "Umar Bakri", waliHp: "08123456789", kelasUmum: "X MIPA", kelasMadrasah: "Ulya 1", saldo: 50000, bulanan: getInitialBulanan() },
-      { id: 2, nis: "2001", nama: "Siti Aminah", kamar: "Khadijah", divisi: "putri", waliNama: "Fatimah Zahra", waliHp: "08987654321", kelasUmum: "VII MTS", kelasMadrasah: "Wustho 2", saldo: 0, bulanan: getInitialBulanan() }
-    ] as Santri[];
-  });
-
-  const [dataAbsensi, setDataAbsensi] = useState<Absensi[]>(() => {
-    const saved = localStorage.getItem('SantriAf_absensi');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [dataPelanggaran, setDataPelanggaran] = useState<Pelanggaran[]>(() => {
-    const saved = localStorage.getItem('SantriAf_pelanggaran');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [dataInfo, setDataInfo] = useState<Info[]>(() => {
-    const saved = localStorage.getItem('SantriAf_info');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [dataSantri, setDataSantri] = useState<Santri[]>([]);
+  const [dataAbsensi, setDataAbsensi] = useState<Absensi[]>([]);
+  const [dataPelanggaran, setDataPelanggaran] = useState<Pelanggaran[]>([]);
+  const [dataInfo, setDataInfo] = useState<Info[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('SantriAf_santri', JSON.stringify(dataSantri));
-  }, [dataSantri]);
+    const unsubSantri = onSnapshot(collection(db, 'santri'), (snapshot) => {
+      setDataSantri(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Santri)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'santri'));
 
-  useEffect(() => {
-    localStorage.setItem('SantriAf_absensi', JSON.stringify(dataAbsensi));
-  }, [dataAbsensi]);
+    const unsubAbsensi = onSnapshot(collection(db, 'absensi'), (snapshot) => {
+      setDataAbsensi(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Absensi)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'absensi'));
 
-  useEffect(() => {
-    localStorage.setItem('SantriAf_pelanggaran', JSON.stringify(dataPelanggaran));
-  }, [dataPelanggaran]);
+    const unsubPelanggaran = onSnapshot(collection(db, 'pelanggaran'), (snapshot) => {
+      setDataPelanggaran(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Pelanggaran)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'pelanggaran'));
 
-  useEffect(() => {
-    localStorage.setItem('SantriAf_info', JSON.stringify(dataInfo));
-  }, [dataInfo]);
+    const unsubInfo = onSnapshot(collection(db, 'info'), (snapshot) => {
+      setDataInfo(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Info)));
+      setLoading(false);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'info'));
+
+    return () => {
+      unsubSantri();
+      unsubAbsensi();
+      unsubPelanggaran();
+      unsubInfo();
+    };
+  }, []);
+
+  const addSantri = async (data: Omit<Santri, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'santri'), data);
+    } catch (err) { handleFirestoreError(err, OperationType.CREATE, 'santri'); }
+  };
+
+  const updateSantri = async (id: string, data: Partial<Santri>) => {
+    try {
+      await updateDoc(doc(db, 'santri', id), data);
+    } catch (err) { handleFirestoreError(err, OperationType.UPDATE, `santri/${id}`); }
+  };
+
+  const deleteSantri = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'santri', id));
+    } catch (err) { handleFirestoreError(err, OperationType.DELETE, `santri/${id}`); }
+  };
+
+  const addAbsensi = async (data: Omit<Absensi, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'absensi'), data);
+    } catch (err) { handleFirestoreError(err, OperationType.CREATE, 'absensi'); }
+  };
+
+  const deleteAbsensi = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'absensi', id));
+    } catch (err) { handleFirestoreError(err, OperationType.DELETE, `absensi/${id}`); }
+  };
+
+  const addPelanggaran = async (data: Omit<Pelanggaran, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'pelanggaran'), data);
+    } catch (err) { handleFirestoreError(err, OperationType.CREATE, 'pelanggaran'); }
+  };
+
+  const updatePelanggaran = async (id: string, data: Partial<Pelanggaran>) => {
+    try {
+      await updateDoc(doc(db, 'pelanggaran', id), data);
+    } catch (err) { handleFirestoreError(err, OperationType.UPDATE, `pelanggaran/${id}`); }
+  };
+
+  const deletePelanggaran = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'pelanggaran', id));
+    } catch (err) { handleFirestoreError(err, OperationType.DELETE, `pelanggaran/${id}`); }
+  };
+
+  const addInfo = async (data: Omit<Info, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'info'), data);
+    } catch (err) { handleFirestoreError(err, OperationType.CREATE, 'info'); }
+  };
+
+  const deleteInfo = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'info', id));
+    } catch (err) { handleFirestoreError(err, OperationType.DELETE, `info/${id}`); }
+  };
 
   return {
-    dataSantri, setDataSantri,
-    dataAbsensi, setDataAbsensi,
-    dataPelanggaran, setDataPelanggaran,
-    dataInfo, setDataInfo
+    dataSantri, addSantri, updateSantri, deleteSantri,
+    dataAbsensi, addAbsensi, deleteAbsensi,
+    dataPelanggaran, addPelanggaran, updatePelanggaran, deletePelanggaran,
+    dataInfo, addInfo, deleteInfo,
+    loading
   };
 }

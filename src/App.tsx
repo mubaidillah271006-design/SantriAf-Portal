@@ -3,26 +3,51 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut } from 'lucide-react';
 import { useDatabase } from './hooks/useDatabase';
-import { AuthRole, User } from './types';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './lib/firebase';
+import { AuthRole, User, Santri } from './types';
 import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import WaliDashboard from './components/WaliDashboard';
 
 export default function App() {
   const {
-    dataSantri, setDataSantri,
-    dataAbsensi, setDataAbsensi,
-    dataPelanggaran, setDataPelanggaran,
-    dataInfo, setDataInfo
+    dataSantri, addSantri, updateSantri, deleteSantri,
+    dataAbsensi, addAbsensi, deleteAbsensi,
+    dataPelanggaran, addPelanggaran, updatePelanggaran, deletePelanggaran,
+    dataInfo, addInfo, deleteInfo,
+    loading
   } = useDatabase();
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const handleLogin = (role: AuthRole, divisi?: 'putra' | 'putri', santriId?: number) => {
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // If logged in via Firebase, we still need to know the 'divisi'
+        // This is usually stored in Firestore, but for simplicity we keep it in local state or ref
+        // For now, if re-logging in automatically, we might need a default or manual selection
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => unsubAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
+      </div>
+    );
+  }
+
+  const handleLogin = (role: AuthRole, divisi?: 'putra' | 'putri', santriId?: string) => {
     setCurrentUser({ role, divisi, santriId });
   };
 
@@ -92,13 +117,19 @@ export default function App() {
               <AdminDashboard 
                 currentUser={currentUser}
                 dataSantri={dataSantri}
-                setDataSantri={setDataSantri}
+                addSantri={addSantri}
+                updateSantri={updateSantri}
+                deleteSantri={deleteSantri}
                 dataAbsensi={dataAbsensi}
-                setDataAbsensi={setDataAbsensi}
+                addAbsensi={addAbsensi}
+                deleteAbsensi={deleteAbsensi}
                 dataPelanggaran={dataPelanggaran}
-                setDataPelanggaran={setDataPelanggaran}
+                addPelanggaran={addPelanggaran}
+                updatePelanggaran={updatePelanggaran}
+                deletePelanggaran={deletePelanggaran}
                 dataInfo={dataInfo}
-                setDataInfo={setDataInfo}
+                addInfo={addInfo}
+                deleteInfo={deleteInfo}
               />
             </motion.div>
           )}

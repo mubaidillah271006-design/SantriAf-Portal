@@ -3,7 +3,7 @@ export interface BulananMakan {
 }
 
 export interface Santri {
-  id: number;
+  id: string;
   nis: string;
   nama: string;
   kamar: string;
@@ -17,8 +17,8 @@ export interface Santri {
 }
 
 export interface Absensi {
-  id: number;
-  santriId: number;
+  id: string;
+  santriId: string;
   date: string;
   kegiatan: string;
   keterangan: 'Hadir' | 'Sakit' | 'Izin' | 'Alpa';
@@ -26,8 +26,8 @@ export interface Absensi {
 }
 
 export interface Pelanggaran {
-  id: number;
-  santriId: number;
+  id: string;
+  santriId: string;
   date: string;
   deskripsi: string;
   denda: number;
@@ -36,7 +36,7 @@ export interface Pelanggaran {
 }
 
 export interface Info {
-  id: number;
+  id: string;
   judul: string;
   isi: string;
   date: string;
@@ -47,5 +47,5 @@ export type AuthRole = 'admin' | 'wali' | null;
 export interface User {
   role: AuthRole;
   divisi?: 'putra' | 'putri';
-  santriId?: number;
+  santriId?: string;
 }

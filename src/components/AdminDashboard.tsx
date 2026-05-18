@@ -2,29 +2,35 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, ClipboardCheck, Gavel, Wallet, Bell, Plus, 
-  Trash2, Info, Send, Phone, CheckCircle2, XCircle
+  Trash2, Info, Send, CheckCircle2, XCircle
 } from 'lucide-react';
-import { Santri, Absensi, Pelanggaran, Info as InfoType, User, BulananMakan } from '../types';
+import { Santri, Absensi, Pelanggaran, Info as InfoType, User } from '../types';
 import { formatRupiah, LIST_BULAN_MAKAN, KEGIATAN_OPTIONS, getInitialBulanan } from '../constants';
 
 interface AdminDashboardProps {
   currentUser: User;
   dataSantri: Santri[];
-  setDataSantri: (data: Santri[]) => void;
+  addSantri: (data: Omit<Santri, 'id'>) => Promise<void>;
+  updateSantri: (id: string, data: Partial<Santri>) => Promise<void>;
+  deleteSantri: (id: string) => Promise<void>;
   dataAbsensi: Absensi[];
-  setDataAbsensi: (data: Absensi[]) => void;
+  addAbsensi: (data: Omit<Absensi, 'id'>) => Promise<void>;
+  deleteAbsensi: (id: string) => Promise<void>;
   dataPelanggaran: Pelanggaran[];
-  setDataPelanggaran: (data: Pelanggaran[]) => void;
+  addPelanggaran: (data: Omit<Pelanggaran, 'id'>) => Promise<void>;
+  updatePelanggaran: (id: string, data: Partial<Pelanggaran>) => Promise<void>;
+  deletePelanggaran: (id: string) => Promise<void>;
   dataInfo: InfoType[];
-  setDataInfo: (data: InfoType[]) => void;
+  addInfo: (data: Omit<InfoType, 'id'>) => Promise<void>;
+  deleteInfo: (id: string) => Promise<void>;
 }
 
 export default function AdminDashboard({
   currentUser,
-  dataSantri, setDataSantri,
-  dataAbsensi, setDataAbsensi,
-  dataPelanggaran, setDataPelanggaran,
-  dataInfo, setDataInfo
+  dataSantri, addSantri, updateSantri, deleteSantri,
+  dataAbsensi, addAbsensi, deleteAbsensi,
+  dataPelanggaran, addPelanggaran, updatePelanggaran, deletePelanggaran,
+  dataInfo, addInfo, deleteInfo
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'data' | 'absensi' | 'pelanggaran' | 'keuangan' | 'info'>('data');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,18 +48,18 @@ export default function AdminDashboard({
   const [absDate, setAbsDate] = useState(new Date().toISOString().split('T')[0]);
   const [absKegiatan, setAbsKegiatan] = useState(KEGIATAN_OPTIONS[0]);
   const [absAsrama, setAbsAsrama] = useState('');
-  const [absList, setAbsList] = useState<Record<number, 'Hadir' | 'Sakit' | 'Izin' | 'Alpa'>>({});
+  const [absList, setAbsList] = useState<Record<string, 'Hadir' | 'Sakit' | 'Izin' | 'Alpa'>>({});
 
   // Tab: Pelanggaran state
   const [pelDate, setPelDate] = useState(new Date().toISOString().split('T')[0]);
   const [pelAsrama, setPelAsrama] = useState('');
-  const [pelSantriId, setPelSantriId] = useState<number | ''>('');
+  const [pelSantriId, setPelSantriId] = useState<string | ''>('');
   const [pelDesc, setPelDesc] = useState('');
   const [pelDenda, setPelDenda] = useState<number>(0);
 
   // Tab: Keuangan state
   const [financeAsrama, setFinanceAsrama] = useState('');
-  const [financeSantriId, setFinanceSantriId] = useState<number | ''>('');
+  const [financeSantriId, setFinanceSantriId] = useState<string | ''>('');
   const [topupNominal, setTopupNominal] = useState<number>(0);
 
   const selectedSantriFinance = useMemo(() => 
@@ -67,53 +73,57 @@ export default function AdminDashboard({
 
   // --- ACTIONS ---
 
-  const handleAddSantri = () => {
+  const handleAddSantri = async () => {
     if (!newSantri.nis || !newSantri.nama || !newSantri.kamar || !newSantri.waliHp) return alert('Data wajib diisi!');
-    const santri: Santri = {
-      ...(newSantri as Santri),
-      id: Date.now(),
+    const santri: Omit<Santri, 'id'> = {
+      nis: newSantri.nis!,
+      nama: newSantri.nama!,
+      kamar: newSantri.kamar!,
+      waliHp: newSantri.waliHp!,
+      waliNama: newSantri.waliNama || '',
+      kelasUmum: newSantri.kelasUmum || '-',
+      kelasMadrasah: newSantri.kelasMadrasah || '-',
       divisi: currentUser.divisi!,
       bulanan: getInitialBulanan(),
       saldo: Number(newSantri.saldo) || 0
     };
-    setDataSantri([...dataSantri, santri]);
+    await addSantri(santri);
     setIsModalOpen(false);
     setNewSantri({ nis: '', nama: '', kamar: '', kelasUmum: '', kelasMadrasah: '', waliNama: '', waliHp: '', saldo: 0 });
   };
 
-  const handleSimpanAbsensi = () => {
+  const handleSimpanAbsensi = async () => {
     if (!absAsrama) return alert('Pilih asrama!');
     const filtered = mySantri.filter(s => s.kamar === absAsrama);
-    const newItems: Absensi[] = filtered.map(s => ({
-      id: Date.now() + Math.random(),
-      santriId: s.id,
-      date: absDate,
-      kegiatan: absKegiatan,
-      keterangan: absList[s.id] || 'Hadir',
-      divisi: currentUser.divisi!
-    }));
-    setDataAbsensi([...dataAbsensi, ...newItems]);
+    
+    for (const s of filtered) {
+       await addAbsensi({
+          santriId: s.id,
+          date: absDate,
+          kegiatan: absKegiatan,
+          keterangan: absList[s.id] || 'Hadir',
+          divisi: currentUser.divisi!
+       });
+    }
     alert('Absensi berhasil disimpan!');
   };
 
-  const handleSimpanPelanggaran = () => {
+  const handleSimpanPelanggaran = async () => {
     if (!pelSantriId || !pelDesc) return alert('Lengkapi data!');
-    const id = Number(pelSantriId);
+    const id = pelSantriId;
     let statusLunas = true;
 
     if (pelDenda > 0) {
       const s = dataSantri.find(x => x.id === id);
       if (s && s.saldo >= pelDenda) {
-        const newData = dataSantri.map(x => x.id === id ? { ...x, saldo: x.saldo - pelDenda } : x);
-        setDataSantri(newData);
+        await updateSantri(id, { saldo: s.saldo - pelDenda });
         statusLunas = true;
       } else {
         statusLunas = false;
       }
     }
 
-    const item: Pelanggaran = {
-      id: Date.now(),
+    const item: Omit<Pelanggaran, 'id'> = {
       santriId: id,
       date: pelDate,
       deskripsi: pelDesc,
@@ -121,46 +131,41 @@ export default function AdminDashboard({
       statusLunas,
       divisi: currentUser.divisi!
     };
-    setDataPelanggaran([...dataPelanggaran, item]);
+    await addPelanggaran(item);
     setPelDesc('');
     setPelDenda(0);
     alert('Pelanggaran tercatat!');
   };
 
-  const handleTopup = () => {
+  const handleTopup = async () => {
     if (!financeSantriId || topupNominal <= 0) return;
-    const newData = dataSantri.map(s => s.id === financeSantriId ? { ...s, saldo: s.saldo + Number(topupNominal) } : s);
-    setDataSantri(newData);
+    const s = dataSantri.find(x => x.id === financeSantriId);
+    if (!s) return;
+    await updateSantri(financeSantriId, { saldo: s.saldo + Number(topupNominal) });
     setTopupNominal(0);
     alert('Top-up berhasil!');
   };
 
-  const handlePayDenda = (pelId: number, nominal: number) => {
+  const handlePayDenda = async (pelId: string, nominal: number) => {
+    if (!financeSantriId) return;
     const s = dataSantri.find(x => x.id === financeSantriId);
     if (!s || s.saldo < nominal) return alert('Saldo tidak cukup!');
     
-    setDataSantri(dataSantri.map(x => x.id === financeSantriId ? { ...x, saldo: x.saldo - nominal } : x));
-    setDataPelanggaran(dataPelanggaran.map(p => p.id === pelId ? { ...p, statusLunas: true } : p));
+    await updateSantri(financeSantriId, { saldo: s.saldo - nominal });
+    await updatePelanggaran(pelId, { statusLunas: true });
     alert('Denda dibayar!');
   };
 
-  const handleToggleMakan = (bulan: string) => {
-    if (!financeSantriId) return;
-    setDataSantri(dataSantri.map(s => {
-      if (s.id === financeSantriId) {
-        return {
-          ...s,
-          bulanan: { ...s.bulanan, [bulan]: !s.bulanan[bulan] }
-        };
-      }
-      return s;
-    }));
+  const handleToggleMakan = async (bulan: string) => {
+    if (!financeSantriId || !selectedSantriFinance) return;
+    await updateSantri(financeSantriId, {
+       bulanan: { ...selectedSantriFinance.bulanan, [bulan]: !selectedSantriFinance.bulanan[bulan] }
+    });
   };
 
-  const handleSimpanInfo = () => {
+  const handleSimpanInfo = async () => {
     if (!infoJudul || !infoIsi) return;
-    const item: InfoType = { id: Date.now(), judul: infoJudul, isi: infoIsi, date: infoDate };
-    setDataInfo([...dataInfo, item]);
+    await addInfo({ judul: infoJudul, isi: infoIsi, date: infoDate });
     setInfoJudul('');
     setInfoIsi('');
   };
@@ -177,7 +182,7 @@ export default function AdminDashboard({
           <p className="text-xs text-gray-500 mt-1">Pantau kehadiran, kedisiplinan, dan administrasi keuangan santri.</p>
         </div>
         <div className="bg-emerald-50 px-4 py-2 rounded-2xl border border-emerald-100 flex items-center space-x-3">
-          <div className="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-xs">
+          <div className="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-xs font-sans">
             {currentUser.divisi === 'putra' ? 'L' : 'P'}
           </div>
           <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Divisi {currentUser.divisi}</span>
@@ -253,7 +258,7 @@ export default function AdminDashboard({
                       </td>
                       <td className="px-6 py-5 text-center">
                         <button 
-                          onClick={() => setDataSantri(dataSantri.filter(x => x.id !== s.id))}
+                          onClick={() => deleteSantri(s.id)}
                           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-400 transition-all mx-auto"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -381,7 +386,7 @@ export default function AdminDashboard({
                           }`}>{a.keterangan}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <button onClick={() => setDataAbsensi(dataAbsensi.filter(x => x.id !== a.id))} className="text-red-300 hover:text-red-600">
+                          <button onClick={() => deleteAbsensi(a.id)} className="text-red-300 hover:text-red-600">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
@@ -393,9 +398,6 @@ export default function AdminDashboard({
             </div>
           </motion.div>
         )}
-
-        {/* Similar structure for Pelanggaran, Keuangan, and Info */}
-        {/* I'll simplify the rest for space but maintain core logic */}
 
         {activeTab === 'pelanggaran' && (
           <motion.div key="pelanggaran" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
@@ -415,7 +417,7 @@ export default function AdminDashboard({
                    </div>
                    <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Santri</label>
-                      <select value={pelSantriId} onChange={e => setPelSantriId(Number(e.target.value))} disabled={!pelAsrama} className="w-full border border-gray-200 rounded-xl py-3 px-4 text-xs bg-white mt-1 disabled:opacity-50">
+                      <select value={pelSantriId} onChange={e => setPelSantriId(e.target.value)} disabled={!pelAsrama} className="w-full border border-gray-200 rounded-xl py-3 px-4 text-xs bg-white mt-1 disabled:opacity-50">
                          <option value="">-- Pilih Santri --</option>
                          {mySantri.filter(s => s.kamar === pelAsrama).map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
                       </select>
@@ -462,7 +464,7 @@ export default function AdminDashboard({
                                   ) : '-'}
                                </td>
                                <td className="px-6 py-4 text-center">
-                                  <button onClick={() => setDataPelanggaran(dataPelanggaran.filter(x => x.id !== p.id))} className="text-red-300 hover:text-red-600">
+                                  <button onClick={() => deletePelanggaran(p.id)} className="text-red-300 hover:text-red-600">
                                      <Trash2 className="w-4 h-4" />
                                   </button>
                                </td>
@@ -490,7 +492,7 @@ export default function AdminDashboard({
                       </div>
                       <div>
                          <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">2. Santri</label>
-                         <select value={financeSantriId} onChange={e => setFinanceSantriId(Number(e.target.value))} disabled={!financeAsrama} className="w-full border border-gray-200 rounded-xl py-3 px-4 text-xs bg-slate-50 mt-1 disabled:opacity-50">
+                         <select value={financeSantriId} onChange={e => setFinanceSantriId(e.target.value)} disabled={!financeAsrama} className="w-full border border-gray-200 rounded-xl py-3 px-4 text-xs bg-slate-50 mt-1 disabled:opacity-50">
                             <option value="">-- Pilih Santri --</option>
                             {mySantri.filter(s => s.kamar === financeAsrama).map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
                          </select>
@@ -576,7 +578,7 @@ export default function AdminDashboard({
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {dataInfo.slice().reverse().map(i => (
                    <div key={i.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative group">
-                      <button onClick={() => setDataInfo(dataInfo.filter(x => x.id !== i.id))} className="absolute top-4 right-4 text-red-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100">
+                      <button onClick={() => deleteInfo(i.id)} className="absolute top-4 right-4 text-red-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100">
                          <Trash2 className="w-4 h-4" />
                       </button>
                       <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{i.date}</span>

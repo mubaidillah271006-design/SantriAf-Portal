@@ -1,32 +1,37 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, Users, UserCheck, Shield, Phone } from 'lucide-react';
-import { AuthRole, User } from '../types';
-import { Santri } from '../types';
+import { LogIn, Users, Shield, Phone } from 'lucide-react';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { AuthRole, Santri } from '../types';
 
 interface LoginProps {
-  onLogin: (role: AuthRole, divisi?: 'putra' | 'putri', santriId?: number) => void;
+  onLogin: (role: AuthRole, divisi?: 'putra' | 'putri', santriId?: string) => void;
   dataSantri: Santri[];
 }
 
 export default function Login({ onLogin, dataSantri }: LoginProps) {
   const [activeTab, setActiveTab] = useState<'wali' | 'admin'>('wali');
   const [adminDivisi, setAdminDivisi] = useState<'putra' | 'putri'>('putra');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [waliHp, setWaliHp] = useState('');
   const [errorVisible, setErrorVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Default credentials from the original HTML
-    if (adminEmail === 'ppalfurqon.ofc@gmail.com' && 
-       ((adminDivisi === 'putra' && adminPassword === 'pengurusafputra') || 
-        (adminDivisi === 'putri' && adminPassword === 'pengurusafputri'))) {
-      onLogin('admin', adminDivisi);
-    } else {
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      if (result.user) {
+        // Di sini kita anggap jika login Google berhasil, masuk sebagai admin
+        // Catatan: Di produksi, Anda harus mengecek UID di koleksi 'admins'
+        onLogin('admin', adminDivisi);
+      }
+    } catch (error) {
+      console.error("Login Error:", error);
       setErrorVisible(true);
-      setTimeout(() => setErrorVisible(false), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,12 +80,11 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
 
       <AnimatePresence mode="wait">
         {activeTab === 'admin' ? (
-          <motion.form 
+          <motion.div 
             key="admin-form"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            onSubmit={handleAdminLogin}
             className="space-y-4"
           >
             <div>
@@ -103,38 +107,17 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
               </div>
             </div>
             
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-700">Email Pengurus</label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <UserCheck className="w-4 h-4" />
-                </span>
-                <input 
-                  type="email" 
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="Masukkan email pengurus" 
-                  className="w-full border border-gray-300 rounded-xl py-3 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-700">Password</label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <LogIn className="w-4 h-4" />
-                </span>
-                <input 
-                  type="password" 
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="••••••••" 
-                  className="w-full border border-gray-300 rounded-xl py-3 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  required
-                />
-              </div>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-center">
+              <p className="text-[10px] text-gray-400 uppercase font-bold mb-3">Gunakan Akun Google Pengelola</p>
+              <button 
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-sm"
+              >
+                <img src="https://www.gstatic.com/firebase/anonymous-scan.png" className="w-5 h-5 hidden" alt="" />
+                <LogIn className="w-4 h-4 text-emerald-600" />
+                <span>{loading ? 'Menghubungkan...' : 'Masuk dengan Google'}</span>
+              </button>
             </div>
 
             {errorVisible && (
@@ -143,14 +126,10 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
                 animate={{ opacity: 1, height: 'auto' }}
                 className="text-[10px] bg-red-50 text-red-600 border border-red-200 p-3 rounded-xl flex items-center space-x-2"
               >
-                <span>Email atau password salah.</span>
+                <span>Gagal masuk. Pastikan akun Anda terdaftar sebagai pengelola.</span>
               </motion.div>
             )}
-
-            <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all text-sm mt-2">
-              Masuk Pengurus
-            </button>
-          </motion.form>
+          </motion.div>
         ) : (
           <motion.form 
             key="wali-form"
