@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut } from 'lucide-react';
 import { useDatabase } from './hooks/useDatabase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { AuthRole, User, Santri } from './types';
 import Login from './components/Login';
@@ -33,6 +33,16 @@ export default function App() {
   }, [dataSantri, dataAbsensi, dataPelanggaran, dataInfo, loading]);
 
   useEffect(() => {
+    // Check for redirect result
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        // Redirect login success will be handled by onAuthStateChanged
+        console.log("Redirect login success");
+      }
+    }).catch((error) => {
+      console.error("Redirect Login Error:", error);
+    });
+
     // Check for manual login persistence first
     const savedRole = localStorage.getItem('lastRole') as AuthRole | null;
     const savedDivisi = localStorage.getItem('lastDivisi') as 'putra' | 'putri' | null;

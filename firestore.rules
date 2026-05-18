@@ -12,9 +12,9 @@ service cloud.firestore {
     function isAdmin() { 
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == "kangngedit271006@gmail.com" ||
-        request.auth.token.email.matches("ppalfurqon.ofc@") ||
-        request.auth.token.email == "ppalfurqon.ofc@gmail.com"
+        request.auth.token.email.lower() == "kangngedit271006@gmail.com" ||
+        request.auth.token.email.lower() == "ppalfurqon.ofc@gmail.com" ||
+        request.auth.token.email.lower() == "ppalfurqon.ofc@gmail.com"
       );
     }
     function incoming() { return request.resource.data; }
@@ -55,8 +55,8 @@ service cloud.firestore {
                data.divisi in ['putra', 'putri'];
       }
 
-      allow create: if isAdmin() && isValidAbsensi(incoming());
-      allow update: if isAdmin() && isValidAbsensi(incoming());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
       
       allow read: if true;
@@ -74,8 +74,8 @@ service cloud.firestore {
                data.divisi in ['putra', 'putri'];
       }
 
-      allow create: if isAdmin() && isValidPelanggaran(incoming());
-      allow update: if isAdmin() && isValidPelanggaran(incoming());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
       
       allow read: if true;
@@ -90,8 +90,8 @@ service cloud.firestore {
                data.date is string && data.date.size() == 10;
       }
 
-      allow create: if isAdmin() && isValidInfo(incoming());
-      allow update: if isAdmin() && isValidInfo(incoming());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
       
       allow read: if true;

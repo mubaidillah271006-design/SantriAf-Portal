@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, Users, Shield, Phone } from 'lucide-react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { AuthRole, Santri } from '../types';
 
@@ -41,14 +41,30 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        // Di sini kita anggap jika login Google berhasil, masuk sebagai admin
-        // Catatan: Di produksi, Anda harus mengecek UID di koleksi 'admins'
-        onLogin('admin', adminDivisi);
+      // Force account selection to avoid automatic login with wrong account
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
+      try {
+        const result = await signInWithPopup(auth, provider);
+        if (result.user) {
+          onLogin('admin', adminDivisi);
+        }
+      } catch (popupError: any) {
+        console.error("Popup Error:", popupError);
+        // If popup is blocked, try redirect
+        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+          await signInWithRedirect(auth, provider);
+        } else {
+          throw popupError;
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login Error:", error);
+      let msg = "Gagal login dengan Google.";
+      if (error.code === 'auth/popup-closed-by-user') msg = "Login dibatalkan (jendela ditutup).";
+      if (error.code === 'auth/network-request-failed') msg = "Koneksi internet bermasalah.";
+      
+      alert(`${msg}\n\nTips:\n1. Gunakan browser Chrome/Safari bawaan HP.\n2. Jika di HP, klik tombol 'Buka di Tab Baru' (ikon panah keluar) di bagian atas.\n3. Pastikan email Anda sudah ditambahkan sebagai admin di Firebase Console.`);
       setErrorVisible(true);
     } finally {
       setLoading(false);
