@@ -1,0 +1,8 @@
+{
+  "name": "SantriAf Portal",
+  "description": "Portal terpadu untuk absensi, keuangan, dan kedidplinan santri Pondok Pesantren Al-Furqon.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
