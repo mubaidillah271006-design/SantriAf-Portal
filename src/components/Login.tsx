@@ -14,6 +14,7 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
   const [activeTab, setActiveTab] = useState<'wali' | 'admin'>('wali');
   const [adminDivisi, setAdminDivisi] = useState<'putra' | 'putri'>('putra');
   const [waliHp, setWaliHp] = useState('');
+  const [matchingSantri, setMatchingSantri] = useState<Santri[]>([]);
   const [errorVisible, setErrorVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -37,9 +38,25 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
 
   const handleWaliLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const santri = dataSantri.find(s => s.waliHp === waliHp);
-    if (santri) {
-      onLogin('wali', undefined, santri.id);
+    if (!dataSantri || dataSantri.length === 0) {
+      alert('Data santri sedang dimuat, silakan tunggu sebentar atau muat ulang halaman.');
+      return;
+    }
+    
+    const normalizedInput = waliHp.replace(/[^0-9]/g, '');
+    const matches = dataSantri.filter(s => {
+      const normalizedS = s.waliHp.replace(/[^0-9]/g, '');
+      return normalizedS === normalizedInput || 
+             normalizedS === '0' + normalizedInput || 
+             normalizedS === '62' + normalizedInput ||
+             normalizedInput === '0' + normalizedS ||
+             normalizedInput === '62' + normalizedS;
+    });
+
+    if (matches.length === 1) {
+      onLogin('wali', undefined, matches[0].id);
+    } else if (matches.length > 1) {
+      setMatchingSantri(matches);
     } else {
       setErrorVisible(true);
       setTimeout(() => setErrorVisible(false), 3000);
@@ -87,6 +104,7 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-4"
           >
+            {/* ... admin form ... */}
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-tighter">Pilih Divisi Pengurus</label>
               <div className="grid grid-cols-2 gap-2">
@@ -114,7 +132,6 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
                 disabled={loading}
                 className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-sm"
               >
-                <img src="https://www.gstatic.com/firebase/anonymous-scan.png" className="w-5 h-5 hidden" alt="" />
                 <LogIn className="w-4 h-4 text-emerald-600" />
                 <span>{loading ? 'Menghubungkan...' : 'Masuk dengan Google'}</span>
               </button>
@@ -130,6 +147,39 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
               </motion.div>
             )}
           </motion.div>
+        ) : matchingSantri.length > 0 ? (
+          <motion.div
+            key="santri-selection"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-4"
+          >
+            <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 mb-2">
+              <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-tight">Ditemukan {matchingSantri.length} Santri</p>
+              <p className="text-[9px] text-emerald-600/70 mt-0.5">Pilih nama anak Anda untuk melihat detailnya.</p>
+            </div>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+              {matchingSantri.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => onLogin('wali', undefined, s.id)}
+                  className="w-full bg-white border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 p-4 rounded-2xl text-left transition-all shadow-sm group"
+                >
+                  <p className="text-sm font-bold text-gray-800 group-hover:text-emerald-800">{s.nama}</p>
+                  <div className="flex items-center mt-1 space-x-3 text-[10px] text-gray-400">
+                    <span>NIS: {s.nis}</span>
+                    <span>Asrama: {s.kamar}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button 
+              onClick={() => { setMatchingSantri([]); setWaliHp(''); }}
+              className="w-full py-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest text-center"
+            >
+              Kembali
+            </button>
+          </motion.div>
         ) : (
           <motion.form 
             key="wali-form"
@@ -139,6 +189,7 @@ export default function Login({ onLogin, dataSantri }: LoginProps) {
             onSubmit={handleWaliLogin}
             className="space-y-4"
           >
+            {/* ... wali input ... */}
             <div className="space-y-1">
               <label className="block text-xs font-bold text-gray-700">Nomor HP Wali</label>
               <div className="relative">

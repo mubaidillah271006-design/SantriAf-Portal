@@ -13,20 +13,31 @@ export function useDatabase() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("Setting up Firestore listeners on:", db.app.options.projectId);
+    
+    // Add a listener for connection state
     const unsubSantri = onSnapshot(collection(db, 'santri'), (snapshot) => {
-      setDataSantri(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Santri)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'santri'));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Santri));
+      console.log(`[Sync] ${new Date().toLocaleTimeString()} - Santri updated: ${docs.length} items`);
+      setDataSantri(docs);
+    }, (err) => {
+      console.error("Santri sync error:", err);
+      handleFirestoreError(err, OperationType.LIST, 'santri');
+    });
 
     const unsubAbsensi = onSnapshot(collection(db, 'absensi'), (snapshot) => {
-      setDataAbsensi(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Absensi)));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Absensi));
+      setDataAbsensi(docs);
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'absensi'));
 
     const unsubPelanggaran = onSnapshot(collection(db, 'pelanggaran'), (snapshot) => {
-      setDataPelanggaran(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Pelanggaran)));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Pelanggaran));
+      setDataPelanggaran(docs);
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'pelanggaran'));
 
     const unsubInfo = onSnapshot(collection(db, 'info'), (snapshot) => {
-      setDataInfo(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Info)));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Info));
+      setDataInfo(docs);
       setLoading(false);
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'info'));
 

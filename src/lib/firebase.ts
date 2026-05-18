@@ -46,8 +46,9 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMessage = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -63,5 +64,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  
+  // Visual feedback for user
+  if (errMessage.includes('permission-denied')) {
+    alert(`Akses Ditolak: Anda tidak memiliki izin untuk ${operationType} ke ${path}. Pastikan Anda login dengan akun pengelola yang benar.`);
+  } else {
+    alert(`Error Firestore (${operationType}): ${errMessage}`);
+  }
+  
   throw new Error(JSON.stringify(errInfo));
 }

@@ -23,16 +23,29 @@ export default function App() {
     loading
   } = useDatabase();
 
+  const [lastSync, setLastSync] = useState<Date>(new Date());
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      setLastSync(new Date());
+    }
+  }, [dataSantri, dataAbsensi, dataPelanggaran, dataInfo, loading]);
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // If logged in via Firebase, we still need to know the 'divisi'
-        // This is usually stored in Firestore, but for simplicity we keep it in local state or ref
-        // For now, if re-logging in automatically, we might need a default or manual selection
+        const savedDivisi = localStorage.getItem('lastDivisi') as 'putra' | 'putri' | null;
+        if (savedDivisi) {
+          setCurrentUser({ role: 'admin', divisi: savedDivisi });
+        }
       } else {
-        setCurrentUser(null);
+        const savedWaliId = localStorage.getItem('lastWaliSantriId');
+        if (savedWaliId) {
+          setCurrentUser({ role: 'wali', santriId: savedWaliId });
+        } else {
+          setCurrentUser(null);
+        }
       }
     });
 
@@ -48,10 +61,19 @@ export default function App() {
   }
 
   const handleLogin = (role: AuthRole, divisi?: 'putra' | 'putri', santriId?: string) => {
+    if (role === 'admin' && divisi) {
+      localStorage.setItem('lastDivisi', divisi);
+    }
+    if (role === 'wali' && santriId) {
+      localStorage.setItem('lastWaliSantriId', santriId);
+    }
     setCurrentUser({ role, divisi, santriId });
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('lastDivisi');
+    localStorage.removeItem('lastWaliSantriId');
+    auth.signOut();
     setCurrentUser(null);
   };
 
@@ -102,7 +124,15 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="w-full flex justify-center"
             >
-              <Login onLogin={handleLogin} dataSantri={dataSantri} />
+              <div className="w-full max-w-md">
+                {dataSantri.length === 0 && (
+                  <div className="text-center mb-4 text-[10px] text-amber-600 bg-amber-50 py-2 rounded-lg border border-amber-100 flex items-center justify-center px-4">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-2 animate-bounce"></div>
+                    Menghubungkan ke pusat data...
+                  </div>
+                )}
+                <Login onLogin={handleLogin} dataSantri={dataSantri} />
+              </div>
             </motion.div>
           )}
 
@@ -160,8 +190,23 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-emerald-950 text-emerald-600/50 py-10 text-center text-[10px] font-bold tracking-[0.3em] uppercase">
-        &copy; 2026 SantriAf • Pondok Pesantren Al-Furqon
+      <footer className="bg-emerald-950 px-6 py-12">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-center md:text-left">
+             <p className="text-emerald-600/50 text-[10px] font-bold tracking-[0.3em] uppercase mb-2">&copy; 2026 SantriAf • Pondok Pesantren Al-Furqon</p>
+             <div className="flex items-center justify-center md:justify-start space-x-2 text-[9px] text-emerald-500/30">
+               <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">Project: onyx-sunup-4tgzl</span>
+               <span>•</span>
+               <span className="flex items-center">
+                 Sinkronisasi Otomatis {lastSync ? 'Aktif (' + lastSync.toLocaleTimeString('id-ID') + ')' : 'Menghubungkan...'}
+               </span>
+             </div>
+          </div>
+          <div className="flex items-center bg-white/5 px-4 py-2 rounded-2xl border border-white/5 shadow-inner grow-0">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 mr-3 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.7)]"></div>
+            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Aplikasi Online & Sinkron</span>
+          </div>
+        </div>
       </footer>
     </div>
   );
